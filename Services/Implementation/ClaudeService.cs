@@ -120,7 +120,7 @@ public class ClaudeService : IClaudeService
         _logger.LogInformation("Claude {OperationType} completed successfully. Tokens used: {InputTokens}/{OutputTokens}",
             operationType, claudeResponse.Usage?.InputTokens, claudeResponse.Usage?.OutputTokens);
 
-        return generatedContent;
+        return generatedContent ?? throw new InvalidOperationException("Claude API returned empty content");
     }
 
     public async Task<bool> IsApiAvailableAsync()
@@ -172,7 +172,7 @@ public class ClaudeService : IClaudeService
         };
     }
 
-    private string BuildResumeGenerationPrompt(
+    private static string BuildResumeGenerationPrompt(
         string template, 
         ResumeGenerationRequestDto personalData, 
         string? customInstructions)
