@@ -10,7 +10,7 @@ services:
       - "8080:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Host=db;Database=resumegenerator;Username=postgres;Password=postgres123;Include Error Detail=true
+      - ConnectionStrings__DefaultConnection=Host=db;Database=resumegenerator;Username=postgres;Password=postgres123
       - ClaudeApi__ApiKey=${CLAUDE_API_KEY}
       - OpenAI__ApiKey=${OPENAI_API_KEY}
       - OpenAI__OrganizationId=${OPENAI_ORG_ID}

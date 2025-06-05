@@ -31,21 +31,27 @@ var app = builder.Build();
 // Configure the application pipeline
 app.ConfigureApplication();
 
-// Ensure database is created
-using (var scope = app.Services.CreateScope())
-{
-    var context = scope.ServiceProvider.GetRequiredService<ResumeGeneratorContext>();
-    await context.Database.EnsureCreatedAsync();
-}
-
 try
 {
     Log.Information("Starting Resume Generator API");
+    
+    using (var scope = app.Services.CreateScope())
+    {
+        Log.Information("Creating database scope...");
+        var context = scope.ServiceProvider.GetRequiredService<ResumeGeneratorContext>();
+        
+        Log.Information("Ensuring database is created...");
+        await context.Database.EnsureCreatedAsync();
+        
+        Log.Information("Database initialization completed");
+    }
+    
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "Application terminated unexpectedly");
+    Log.Fatal(ex, "Application failed to start");
+    throw;
 }
 finally
 {
