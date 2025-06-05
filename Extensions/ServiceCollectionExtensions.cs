@@ -5,8 +5,7 @@ using ResumeGenerator.API.Services.BackgroundServices;
 using ResumeGenerator.API.Services.Implementation;
 using ResumeGenerator.API.Services.Interfaces;
 using System.Text.Json.Serialization;
-using HealthChecks.EntityFrameworkCore;
-
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace ResumeGenerator.API.Extensions;
 
