@@ -158,7 +158,7 @@ public class OpenAIService : IOpenAIService
             throw new InvalidOperationException("OpenAI API returned invalid response format");
         }
 
-        var reviewJson = openAiResponse.Choices.First().Message.Content;
+        var reviewJson = openAiResponse.Choices.First().Message!.Content!;
         var result = JsonSerializer.Deserialize<T>(reviewJson, new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase

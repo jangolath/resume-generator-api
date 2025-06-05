@@ -77,8 +77,8 @@ public class ResumeGeneratorContext : DbContext
             entity.Property(e => e.ProgressPercentage)
                 .HasDefaultValue(0);
 
-            entity.HasCheckConstraint("CK_resume_jobs_progress_percentage", 
-                "progress_percentage >= 0 AND progress_percentage <= 100");
+            entity.ToTable(tb => tb.HasCheckConstraint("CK_resume_jobs_progress_percentage", 
+                "progress_percentage >= 0 AND progress_percentage <= 100"));
         });
 
         // Configure ResumeJobLog
@@ -224,7 +224,7 @@ public class ResumeGeneratorContext : DbContext
 
         var creativeTemplate = new ResumeTemplate
         {
-            Id = Guid.Parse("b2c3d4e5-f6g7-8901-2345-678901bcdefg"),
+            Id = Guid.Parse("b2c3d4e5-f6a7-8901-2345-678901bcdef0"),  // Valid - only hex chars (0-9, a-f)
             Name = "Creative Portfolio",
             Description = "A creative template for designers and creative professionals",
             Content = @"
