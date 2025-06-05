@@ -1,0 +1,102 @@
+# .dockerignore for Resume Generator API
+
+## Build outputs
+**/bin/
+**/obj/
+**/out/
+**/publish/
+
+## Development files
+**/.vs/
+**/.vscode/
+**/.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Test projects and outputs
+Tests/
+**/*Tests*/
+**/*.Tests/
+TestResults/
+**/*.trx
+**/*.coverage
+**/*.coveragexml
+
+## Documentation and scripts
+docs/
+scripts/
+*.md
+!README.md
+
+## Environment and configuration
+.env
+.env.*
+!.env.template
+appsettings.*.json
+!appsettings.json
+!appsettings.Production.json
+secrets.json
+
+## Git and version control
+.git/
+.gitignore
+.gitattributes
+
+## Docker files (avoid recursion)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+## Log files
+logs/
+*.log
+**/*.log
+
+## Temporary files
+tmp/
+temp/
+**/.tmp/
+
+## Node.js (if any)
+node_modules/
+npm-debug.log*
+
+## IDE specific
+.DS_Store
+Thumbs.db
+
+## NuGet
+*.nupkg
+**/packages/
+!**/packages/build/
+
+## Database files
+*.db
+*.sqlite
+*.sqlite3
+
+## SSL certificates
+*.pfx
+*.p12
+*.key
+*.pem
+
+## Backup files
+*.bak
+*.backup
+
+## GitHub workflows (not needed in container)
+.github/
+
+## Keep these files for the container build
+!ResumeGenerator.API.csproj
+!Program.cs
+!Controllers/
+!Services/
+!Models/
+!Data/
+!Configuration/
+!Middleware/
+!Extensions/

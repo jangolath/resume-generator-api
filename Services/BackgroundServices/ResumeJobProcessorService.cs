@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ResumeGenerator.API.Configuration;
 using ResumeGenerator.API.Data;
+using ResumeGenerator.API.Models.DTOs;
 using ResumeGenerator.API.Models.Entities;
 using ResumeGenerator.API.Models.Enums;
 using ResumeGenerator.API.Services.Interfaces;
@@ -205,7 +206,64 @@ public class ResumeJobProcessor
                 job.InputData,
                 job.CustomInstructions);
 
-            await UpdateJobStatusAsync(job, JobStatus.InProgress, 60, null, "Content generated successfully");
+            AiReviewDto? aiReview = null;
+
+            // Step 3: Optional AI Review with OpenAI
+            if (job.IncludeAiReview)
+            {
+                await UpdateJobStatusAsync(job, JobStatus.InProgress, 60, ProcessingStep.OpenAiReview, "Reviewing resume with OpenAI");
+                
+                try
+                {
+                    aiReview = await _openAiService.ReviewResumeAsync(generatedContent, job.InputData);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "OpenAI review failed for job {JobId}, continuing without review", jobId);
+                }
+            }
+
+            // Step 4: Generate cover letter if requested
+            string? coverLetterContent = null;
+            CoverLetterReviewDto? coverLetterReview = null;
+            if (job.GenerateCoverLetter)
+            {
+                await UpdateJobStatusAsync(job, JobStatus.InProgress, 70, ProcessingStep.ClaudeGeneration, "Generating cover letter with Claude AI");
+                
+                try
+                {
+                    coverLetterContent = await _claudeService.GenerateCoverLetterAsync(job.InputData, job.CustomInstructions);
+                    
+                    // Review cover letter if AI review is enabled
+                    if (job.IncludeAiReview)
+                    {
+                        await UpdateJobStatusAsync(job, JobStatus.InProgress, 75, ProcessingStep.OpenAiReview, "Reviewing cover letter with OpenAI");
+                        coverLetterReview = await _openAiService.ReviewCoverLetterAsync(coverLetterContent, job.InputData);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Cover letter generation failed for job {JobId}, continuing without cover letter", jobId);
+                }
+            }
+
+            // Step 5: Job match analysis if job description provided
+            JobMatchAnalysisDto? jobMatchAnalysis = null;
+            if (job.JobDescription != null && job.IncludeAiReview)
+            {
+                await UpdateJobStatusAsync(job, JobStatus.InProgress, 80, ProcessingStep.OpenAiReview, "Analyzing job match with OpenAI");
+                
+                try
+                {
+                    jobMatchAnalysis = await _openAiService.AnalyzeJobMatchAsync(generatedContent, job.InputData);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Job match analysis failed for job {JobId}, continuing without analysis", jobId);
+                }
+            }
+
+            await UpdateJobStatusAsync(job, JobStatus.InProgress, 85, ProcessingStep.Formatting, "Formatting final output");
 
             // Step 4: Optional AI Review
             Models.DTOs.AiReviewDto? aiReview = null;
@@ -225,16 +283,20 @@ public class ResumeJobProcessor
 
             await UpdateJobStatusAsync(job, JobStatus.InProgress, 85, ProcessingStep.Formatting, "Formatting final output");
 
-            // Step 5: Format output based on requested format
+            // Step 6: Format output based on requested format
             var finalContent = await FormatOutputAsync(generatedContent, job.OutputFormat);
+            var finalCoverLetter = coverLetterContent != null ? await FormatOutputAsync(coverLetterContent, job.OutputFormat) : null;
 
             await UpdateJobStatusAsync(job, JobStatus.InProgress, 95, ProcessingStep.Finalizing, "Finalizing resume");
 
-            // Step 6: Save final content
+            // Step 7: Save final content
             stopwatch.Stop();
             
             job.GeneratedContent = finalContent;
+            job.CoverLetterContent = finalCoverLetter;
             job.AiReview = aiReview;
+            job.CoverLetterReview = coverLetterReview;
+            job.JobMatchAnalysis = jobMatchAnalysis;
             job.Status = JobStatus.Completed;
             job.ProgressPercentage = 100;
             job.CompletedAt = DateTime.UtcNow;

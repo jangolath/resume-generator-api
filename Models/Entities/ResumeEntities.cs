@@ -1,4 +1,5 @@
 using ResumeGenerator.API.Models.Enums;
+using ResumeGenerator.API.Models.DTOs;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -174,42 +175,42 @@ public class ResumeJob
 
     // Helper properties for complex JSON data
     [NotMapped]
-    public Models.DTOs.ResumeGenerationRequestDto? InputData
+    public ResumeGenerationRequestDto? InputData
     {
         get => string.IsNullOrEmpty(InputDataJson) ? null : 
-               System.Text.Json.JsonSerializer.Deserialize<Models.DTOs.ResumeGenerationRequestDto>(InputDataJson);
+               System.Text.Json.JsonSerializer.Deserialize<ResumeGenerationRequestDto>(InputDataJson);
         set => InputDataJson = value == null ? string.Empty : System.Text.Json.JsonSerializer.Serialize(value);
     }
 
     [NotMapped]
-    public Models.DTOs.AiReviewDto? AiReview
+    public AiReviewDto? AiReview
     {
         get => string.IsNullOrEmpty(AiReviewJson) ? null : 
-               System.Text.Json.JsonSerializer.Deserialize<Models.DTOs.AiReviewDto>(AiReviewJson);
+               System.Text.Json.JsonSerializer.Deserialize<AiReviewDto>(AiReviewJson);
         set => AiReviewJson = value == null ? null : System.Text.Json.JsonSerializer.Serialize(value);
     }
 
     [NotMapped]
-    public Models.DTOs.CoverLetterReviewDto? CoverLetterReview
+    public CoverLetterReviewDto? CoverLetterReview
     {
         get => string.IsNullOrEmpty(CoverLetterReviewJson) ? null : 
-               System.Text.Json.JsonSerializer.Deserialize<Models.DTOs.CoverLetterReviewDto>(CoverLetterReviewJson);
+               System.Text.Json.JsonSerializer.Deserialize<CoverLetterReviewDto>(CoverLetterReviewJson);
         set => CoverLetterReviewJson = value == null ? null : System.Text.Json.JsonSerializer.Serialize(value);
     }
 
     [NotMapped]
-    public Models.DTOs.JobMatchAnalysisDto? JobMatchAnalysis
+    public JobMatchAnalysisDto? JobMatchAnalysis
     {
         get => string.IsNullOrEmpty(JobMatchAnalysisJson) ? null : 
-               System.Text.Json.JsonSerializer.Deserialize<Models.DTOs.JobMatchAnalysisDto>(JobMatchAnalysisJson);
+               System.Text.Json.JsonSerializer.Deserialize<JobMatchAnalysisDto>(JobMatchAnalysisJson);
         set => JobMatchAnalysisJson = value == null ? null : System.Text.Json.JsonSerializer.Serialize(value);
     }
 
     [NotMapped]
-    public Models.DTOs.JobDescriptionDto? JobDescription
+    public JobDescriptionDto? JobDescription
     {
         get => string.IsNullOrEmpty(JobDescriptionJson) ? null : 
-               System.Text.Json.JsonSerializer.Deserialize<Models.DTOs.JobDescriptionDto>(JobDescriptionJson);
+               System.Text.Json.JsonSerializer.Deserialize<JobDescriptionDto>(JobDescriptionJson);
         set => JobDescriptionJson = value == null ? null : System.Text.Json.JsonSerializer.Serialize(value);
     }
 }
