@@ -5,6 +5,8 @@ using ResumeGenerator.API.Services.BackgroundServices;
 using ResumeGenerator.API.Services.Implementation;
 using ResumeGenerator.API.Services.Interfaces;
 using System.Text.Json.Serialization;
+using HealthChecks.EntityFrameworkCore;
+
 
 namespace ResumeGenerator.API.Extensions;
 
@@ -143,7 +145,7 @@ public static class ServiceCollectionExtensions
         .AddJsonOptions(options =>
         {
             options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
-            options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+            options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
             options.JsonSerializerOptions.WriteIndented = false;
             options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
         });

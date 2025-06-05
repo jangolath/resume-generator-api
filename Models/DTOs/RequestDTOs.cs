@@ -15,6 +15,68 @@ public class ResumeGenerationRequestDto
     [Required]
     public Guid TemplateId { get; set; }
 
+    /// <summary>
+    /// Personal information for the resume
+    /// </summary>
+    [Required]
+    public PersonalInfoDto PersonalInfo { get; set; } = new();
+
+    /// <summary>
+    /// Professional experience entries
+    /// </summary>
+    public List<ExperienceDto> Experience { get; set; } = new();
+
+    /// <summary>
+    /// Education entries
+    /// </summary>
+    public List<EducationDto> Education { get; set; } = new();
+
+    /// <summary>
+    /// Skills and competencies
+    /// </summary>
+    public List<string> Skills { get; set; } = new();
+
+    /// <summary>
+    /// Certifications and awards
+    /// </summary>
+    public List<CertificationDto> Certifications { get; set; } = new();
+
+    /// <summary>
+    /// Projects to highlight
+    /// </summary>
+    public List<ProjectDto> Projects { get; set; } = new();
+
+    /// <summary>
+    /// Additional sections (custom content)
+    /// </summary>
+    public Dictionary<string, object> AdditionalSections { get; set; } = new();
+
+    /// <summary>
+    /// Preferred output format
+    /// </summary>
+    public OutputFormat OutputFormat { get; set; } = OutputFormat.Html;
+
+    /// <summary>
+    /// Whether to use OpenAI for review and suggestions
+    /// </summary>
+    public bool IncludeAiReview { get; set; } = true;
+
+    /// <summary>
+    /// Whether to generate a cover letter
+    /// </summary>
+    public bool GenerateCoverLetter { get; set; } = false;
+
+    /// <summary>
+    /// Job description to tailor the resume and cover letter for
+    /// </summary>
+    public JobDescriptionDto? JobDescription { get; set; }
+
+    /// <summary>
+    /// Custom instructions for the AI generation
+    /// </summary>
+    public string? CustomInstructions { get; set; }
+}
+
 /// <summary>
 /// Job description for tailoring resume and cover letter
 /// </summary>
@@ -104,68 +166,6 @@ public class JobDescriptionDto
     /// </summary>
     [Url, MaxLength(500)]
     public string? JobPostingUrl { get; set; }
-}
-
-    /// <summary>
-    /// Personal information for the resume
-    /// </summary>
-    [Required]
-    public PersonalInfoDto PersonalInfo { get; set; } = new();
-
-    /// <summary>
-    /// Professional experience entries
-    /// </summary>
-    public List<ExperienceDto> Experience { get; set; } = new();
-
-    /// <summary>
-    /// Education entries
-    /// </summary>
-    public List<EducationDto> Education { get; set; } = new();
-
-    /// <summary>
-    /// Skills and competencies
-    /// </summary>
-    public List<string> Skills { get; set; } = new();
-
-    /// <summary>
-    /// Certifications and awards
-    /// </summary>
-    public List<CertificationDto> Certifications { get; set; } = new();
-
-    /// <summary>
-    /// Projects to highlight
-    /// </summary>
-    public List<ProjectDto> Projects { get; set; } = new();
-
-    /// <summary>
-    /// Additional sections (custom content)
-    /// </summary>
-    public Dictionary<string, object> AdditionalSections { get; set; } = new();
-
-    /// <summary>
-    /// Preferred output format
-    /// </summary>
-    public OutputFormat OutputFormat { get; set; } = OutputFormat.Html;
-
-    /// <summary>
-    /// Whether to use OpenAI for review and suggestions
-    /// </summary>
-    public bool IncludeAiReview { get; set; } = true;
-
-    /// <summary>
-    /// Whether to generate a cover letter
-    /// </summary>
-    public bool GenerateCoverLetter { get; set; } = false;
-
-    /// <summary>
-    /// Job description to tailor the resume and cover letter for
-    /// </summary>
-    public JobDescriptionDto? JobDescription { get; set; }
-
-    /// <summary>
-    /// Custom instructions for the AI generation
-    /// </summary>
-    public string? CustomInstructions { get; set; }
 }
 
 /// <summary>

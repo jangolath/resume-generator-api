@@ -206,9 +206,8 @@ public class ResumeJobProcessor
                 job.InputData,
                 job.CustomInstructions);
 
+            // Step 4: Optional AI Review with OpenAI
             AiReviewDto? aiReview = null;
-
-            // Step 3: Optional AI Review with OpenAI
             if (job.IncludeAiReview)
             {
                 await UpdateJobStatusAsync(job, JobStatus.InProgress, 60, ProcessingStep.OpenAiReview, "Reviewing resume with OpenAI");
@@ -223,7 +222,7 @@ public class ResumeJobProcessor
                 }
             }
 
-            // Step 4: Generate cover letter if requested
+            // Step 5: Generate cover letter if requested
             string? coverLetterContent = null;
             CoverLetterReviewDto? coverLetterReview = null;
             if (job.GenerateCoverLetter)
@@ -247,7 +246,7 @@ public class ResumeJobProcessor
                 }
             }
 
-            // Step 5: Job match analysis if job description provided
+            // Step 6: Job match analysis if job description provided
             JobMatchAnalysisDto? jobMatchAnalysis = null;
             if (job.JobDescription != null && job.IncludeAiReview)
             {
@@ -265,31 +264,13 @@ public class ResumeJobProcessor
 
             await UpdateJobStatusAsync(job, JobStatus.InProgress, 85, ProcessingStep.Formatting, "Formatting final output");
 
-            // Step 4: Optional AI Review
-            Models.DTOs.AiReviewDto? aiReview = null;
-            if (job.IncludeAiReview)
-            {
-                await UpdateJobStatusAsync(job, JobStatus.InProgress, 70, ProcessingStep.OpenAiReview, "Reviewing resume with OpenAI");
-                
-                try
-                {
-                    aiReview = await _openAiService.ReviewResumeAsync(generatedContent, job.InputData);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "OpenAI review failed for job {JobId}, continuing without review", jobId);
-                }
-            }
-
-            await UpdateJobStatusAsync(job, JobStatus.InProgress, 85, ProcessingStep.Formatting, "Formatting final output");
-
-            // Step 6: Format output based on requested format
+            // Step 7: Format output based on requested format
             var finalContent = await FormatOutputAsync(generatedContent, job.OutputFormat);
             var finalCoverLetter = coverLetterContent != null ? await FormatOutputAsync(coverLetterContent, job.OutputFormat) : null;
 
             await UpdateJobStatusAsync(job, JobStatus.InProgress, 95, ProcessingStep.Finalizing, "Finalizing resume");
 
-            // Step 7: Save final content
+            // Step 8: Save final content
             stopwatch.Stop();
             
             job.GeneratedContent = finalContent;
