@@ -39,18 +39,18 @@ app.ConfigureApplication();
 try
 {
     Log.Information("Starting Resume Generator API");
-    
+
     using (var scope = app.Services.CreateScope())
     {
         Log.Information("Creating database scope...");
         var context = scope.ServiceProvider.GetRequiredService<ResumeGeneratorContext>();
-        
+
         Log.Information("Ensuring database is created...");
         await context.Database.EnsureCreatedAsync();
-        
+
         Log.Information("Database initialization completed");
     }
-    
+
     app.Run();
 }
 catch (Exception ex)
@@ -62,3 +62,5 @@ finally
 {
     Log.CloseAndFlush();
 }
+
+public partial class Program { }
