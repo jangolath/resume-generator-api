@@ -588,3 +588,5 @@ docker-compose.secrets.yml
 !.github/workflows/
 !.github/ISSUE_TEMPLATE/
 !.github/PULL_REQUEST_TEMPLATE/
+test-claude.ps1
+test-openai.ps1

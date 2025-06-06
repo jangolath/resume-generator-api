@@ -198,21 +198,98 @@ public static class ServiceCollectionExtensions
             .AddDbContextCheck<ResumeGeneratorContext>(
                 name: "database",
                 tags: new[] { "db", "ready" })
-            .AddUrlGroup(
-                new Uri("https://api.anthropic.com/v1/health"),
+            // Remove the URL health checks and add custom ones
+            .AddCheck<ClaudeHealthCheck>(
                 name: "claude-api",
-                tags: new[] { "external", "ai" },
-                timeout: TimeSpan.FromSeconds(10))
-            .AddUrlGroup(
-                new Uri("https://api.openai.com/v1/models"),
+                tags: new[] { "external", "ai" })
+            .AddCheck<OpenAIHealthCheck>(
                 name: "openai-api", 
-                tags: new[] { "external", "ai" },
-                timeout: TimeSpan.FromSeconds(10))
+                tags: new[] { "external", "ai" })
             .AddCheck<CustomHealthCheck>(
                 name: "application",
                 tags: new[] { "app", "ready" });
 
         return services;
+    }
+
+    /// <summary>
+    /// Health check for Claude API
+    /// </summary>
+    public class ClaudeHealthCheck : IHealthCheck
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<ClaudeHealthCheck> _logger;
+
+        public ClaudeHealthCheck(IServiceScopeFactory scopeFactory, ILogger<ClaudeHealthCheck> logger)
+        {
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
+
+        public async Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var claudeService = scope.ServiceProvider.GetRequiredService<IClaudeService>();
+                
+                var isAvailable = await claudeService.IsApiAvailableAsync();
+                
+                if (isAvailable)
+                {
+                    return HealthCheckResult.Healthy("Claude API is accessible");
+                }
+                
+                return HealthCheckResult.Unhealthy("Claude API is not accessible");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Claude API health check failed");
+                return HealthCheckResult.Unhealthy("Claude API health check failed", ex);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Health check for OpenAI API
+    /// </summary>
+    public class OpenAIHealthCheck : IHealthCheck
+    {
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly ILogger<OpenAIHealthCheck> _logger;
+
+        public OpenAIHealthCheck(IServiceScopeFactory scopeFactory, ILogger<OpenAIHealthCheck> logger)
+        {
+            _scopeFactory = scopeFactory;
+            _logger = logger;
+        }
+
+        public async Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var openAiService = scope.ServiceProvider.GetRequiredService<IOpenAIService>();
+                
+                var isAvailable = await openAiService.IsApiAvailableAsync();
+                
+                if (isAvailable)
+                {
+                    return HealthCheckResult.Healthy("OpenAI API is accessible");
+                }
+                
+                return HealthCheckResult.Unhealthy("OpenAI API is not accessible");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "OpenAI API health check failed");
+                return HealthCheckResult.Unhealthy("OpenAI API health check failed", ex);
+            }
+        }
     }
 
     /// <summary>
