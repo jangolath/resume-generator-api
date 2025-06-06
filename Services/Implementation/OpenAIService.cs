@@ -27,20 +27,105 @@ public class OpenAIService : IOpenAIService
         _settings = settings.Value;
         _logger = logger;
 
+        // Enhanced debug logging
+        _logger.LogInformation("OpenAI Service Configuration:");
+        _logger.LogInformation("- Base URL: {BaseUrl}", _settings.BaseUrl);
+        _logger.LogInformation("- Review Model: {Model}", _settings.ReviewModel);
+        _logger.LogInformation("- API Key: {ApiKey}", 
+            string.IsNullOrEmpty(_settings.ApiKey) ? "NOT SET" : $"SET (length: {_settings.ApiKey.Length}, starts with: {_settings.ApiKey.Substring(0, Math.Min(10, _settings.ApiKey.Length))}...)");
+        _logger.LogInformation("- Organization ID: {OrgId}", 
+            string.IsNullOrEmpty(_settings.OrganizationId) ? "NOT SET" : _settings.OrganizationId);
+        _logger.LogInformation("- Timeout: {Timeout} seconds", _settings.TimeoutSeconds);
+
         ConfigureHttpClient();
+
+        // Log configured headers
+        _logger.LogInformation("Configured HTTP Headers:");
+        foreach (var header in _httpClient.DefaultRequestHeaders)
+        {
+            // Don't log the full auth header for security
+            if (header.Key == "Authorization")
+            {
+                _logger.LogInformation("- {Key}: Bearer {Value}", header.Key, 
+                    header.Value.FirstOrDefault()?.Substring(0, Math.Min(20, header.Value.FirstOrDefault()?.Length ?? 0)) + "...");
+            }
+            else
+            {
+                _logger.LogInformation("- {Key}: {Value}", header.Key, string.Join(", ", header.Value));
+            }
+        }
     }
 
     private void ConfigureHttpClient()
     {
         _httpClient.BaseAddress = new Uri(_settings.BaseUrl);
-        _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.ApiKey}");
         
+        // Clear existing headers first
+        _httpClient.DefaultRequestHeaders.Clear();
+        
+        // Add authorization header
+        if (!string.IsNullOrEmpty(_settings.ApiKey))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.ApiKey}");
+            _logger.LogDebug("Added Authorization header with API key");
+        }
+        else
+        {
+            _logger.LogError("OpenAI API key is not set!");
+        }
+        
+        // Only add organization header if it's not empty
         if (!string.IsNullOrEmpty(_settings.OrganizationId))
         {
             _httpClient.DefaultRequestHeaders.Add("OpenAI-Organization", _settings.OrganizationId);
+            _logger.LogDebug("Added OpenAI-Organization header: {OrgId}", _settings.OrganizationId);
         }
         
         _httpClient.Timeout = TimeSpan.FromSeconds(_settings.TimeoutSeconds);
+    }
+
+    public async Task<bool> IsApiAvailableAsync()
+    {
+        try
+        {
+            _logger.LogDebug("Checking OpenAI API availability...");
+            
+            // Create a new request message to see exactly what's being sent
+            var request = new HttpRequestMessage(HttpMethod.Get, "/v1/models");
+            
+            // Log the request details
+            _logger.LogDebug("Request URI: {Uri}", request.RequestUri);
+            _logger.LogDebug("Request headers:");
+            foreach (var header in _httpClient.DefaultRequestHeaders)
+            {
+                if (header.Key == "Authorization")
+                {
+                    _logger.LogDebug("- {Key}: {Value}", header.Key, "Bearer [REDACTED]");
+                }
+                else
+                {
+                    _logger.LogDebug("- {Key}: {Value}", header.Key, string.Join(", ", header.Value));
+                }
+            }
+            
+            var response = await _httpClient.SendAsync(request);
+            
+            _logger.LogDebug("OpenAI API response: {StatusCode} - {ReasonPhrase}", 
+                response.StatusCode, response.ReasonPhrase);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                _logger.LogError("OpenAI API error response: {Content}", content);
+            }
+            
+            return response.IsSuccessStatusCode;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "OpenAI API availability check failed with exception");
+            return false;
+        }
     }
 
     public async Task<AiReviewDto> ReviewResumeAsync(string resumeContent, ResumeGenerationRequestDto personalData)
@@ -184,20 +269,6 @@ public class OpenAIService : IOpenAIService
             nameof(JobMatchAnalysisDto) => "You are an expert recruitment consultant and career advisor. Analyze how well a candidate's resume aligns with a specific job description and provide detailed matching insights.",
             _ => "You are an expert career consultant. Provide professional analysis and actionable feedback."
         };
-    }
-
-    public async Task<bool> IsApiAvailableAsync()
-    {
-        try
-        {
-            var response = await _httpClient.GetAsync("/models");
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "OpenAI API availability check failed");
-            return false;
-        }
     }
 
     public async Task<ApiUsageStatsDto> GetUsageStatsAsync()
