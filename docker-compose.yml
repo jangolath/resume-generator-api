@@ -71,7 +71,7 @@ services:
   pgadmin:
     image: dpage/pgadmin4:latest
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@resumegenerator.com
+      - PGADMIN_DEFAULT_EMAIL=jwoodtechnologies@gmail.com
       - PGADMIN_DEFAULT_PASSWORD=admin123
       - PGADMIN_LISTEN_PORT=80
     ports:

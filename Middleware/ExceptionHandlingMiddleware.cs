@@ -91,7 +91,7 @@ public class RequestLoggingMiddleware
             requestId, context.Request.Method, context.Request.Path);
 
         // Add request ID to response headers
-        context.Response.Headers.Add("X-Request-ID", requestId);
+        context.Response.Headers.Append("X-Request-ID", requestId);
 
         try
         {
@@ -224,9 +224,9 @@ public class CorsMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-        context.Response.Headers.Add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-        context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+        context.Response.Headers.Append("Access-Control-Allow-Origin", "*");
+        context.Response.Headers.Append("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+        context.Response.Headers.Append("Access-Control-Allow-Headers", "Content-Type, Authorization");
 
         if (context.Request.Method == "OPTIONS")
         {
