@@ -27,6 +27,15 @@ public class GoogleDocsService : IGoogleDocsService
         _settings = settings.Value;
         _logger = logger;
 
+        // Add detailed logging for debugging
+        _logger.LogInformation("Initializing GoogleDocsService with configuration:");
+        _logger.LogInformation("- UseCredentialsFile: {UseCredentialsFile}", _settings.UseCredentialsFile);
+        _logger.LogInformation("- ServiceAccountCredentials: {CredentialsInfo}", 
+            string.IsNullOrEmpty(_settings.ServiceAccountCredentials) ? "NOT SET" : 
+            _settings.UseCredentialsFile ? $"FILE PATH: {_settings.ServiceAccountCredentials}" : "JSON CONTENT SET");
+        _logger.LogInformation("- TemplateFolderId: {FolderId}", _settings.TemplateFolderId);
+        _logger.LogInformation("- ApplicationName: {AppName}", _settings.ApplicationName);
+
         var credential = GetGoogleCredential();
         
         _docsService = new DocsService(new BaseClientService.Initializer()
@@ -40,12 +49,20 @@ public class GoogleDocsService : IGoogleDocsService
             HttpClientInitializer = credential,
             ApplicationName = _settings.ApplicationName,
         });
+
+        _logger.LogInformation("GoogleDocsService initialized successfully");
     }
 
     public async Task<IEnumerable<GoogleDocsTemplateDto>> GetTemplatesFromFolderAsync()
     {
         try
         {
+            if (string.IsNullOrEmpty(_settings.TemplateFolderId))
+            {
+                _logger.LogWarning("TemplateFolderId is not configured");
+                return new List<GoogleDocsTemplateDto>();
+            }
+
             _logger.LogInformation("Fetching templates from Google Drive folder: {FolderId}", _settings.TemplateFolderId);
 
             var request = _driveService.Files.List();
@@ -72,33 +89,6 @@ public class GoogleDocsService : IGoogleDocsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error fetching templates from Google Drive folder");
-            throw;
-        }
-    }
-
-    public async Task<string> ImportTemplateFromGoogleDocsAsync(string documentUrl, string? credentials = null)
-    {
-        try
-        {
-            var documentId = ExtractDocumentIdFromUrl(documentUrl);
-            if (string.IsNullOrEmpty(documentId))
-            {
-                throw new ArgumentException("Invalid Google Docs URL");
-            }
-
-            _logger.LogInformation("Importing template from Google Docs: {DocumentId}", documentId);
-
-            var request = _docsService.Documents.Get(documentId);
-            var document = await request.ExecuteAsync();
-
-            var htmlContent = ConvertDocumentToHtml(document);
-            
-            _logger.LogInformation("Successfully imported template from Google Docs: {DocumentId}", documentId);
-            return htmlContent;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error importing template from Google Docs: {Url}", documentUrl);
             throw;
         }
     }
@@ -142,6 +132,33 @@ public class GoogleDocsService : IGoogleDocsService
         }
     }
 
+    public async Task<string> ImportTemplateFromGoogleDocsAsync(string documentUrl, string? credentials = null)
+    {
+        try
+        {
+            var documentId = ExtractDocumentIdFromUrl(documentUrl);
+            if (string.IsNullOrEmpty(documentId))
+            {
+                throw new ArgumentException("Invalid Google Docs URL");
+            }
+
+            _logger.LogInformation("Importing template from Google Docs: {DocumentId}", documentId);
+
+            var request = _docsService.Documents.Get(documentId);
+            var document = await request.ExecuteAsync();
+
+            var htmlContent = ConvertDocumentToHtml(document);
+            
+            _logger.LogInformation("Successfully imported template from Google Docs: {DocumentId}", documentId);
+            return htmlContent;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error importing template from Google Docs: {Url}", documentUrl);
+            throw;
+        }
+    }
+
     public async Task<string> ConvertToGoogleDocsFormatAsync(string content, OutputFormat format)
     {
         _logger.LogInformation("Converting content to Google Docs format from {Format}", format);
@@ -169,25 +186,78 @@ public class GoogleDocsService : IGoogleDocsService
     {
         try
         {
+            _logger.LogInformation("Creating Google credential...");
+
             GoogleCredential credential;
 
-            if (_settings.UseCredentialsFile && File.Exists(_settings.ServiceAccountCredentials))
+            if (_settings.UseCredentialsFile)
             {
                 // Load from file
-                using var stream = new FileStream(_settings.ServiceAccountCredentials, FileMode.Open, FileAccess.Read);
-                credential = GoogleCredential.FromStream(stream);
+                _logger.LogInformation("Loading credentials from file: {FilePath}", _settings.ServiceAccountCredentials);
+                
+                if (!File.Exists(_settings.ServiceAccountCredentials))
+                {
+                    throw new FileNotFoundException($"Service account credentials file not found: {_settings.ServiceAccountCredentials}");
+                }
+
+                var fileInfo = new FileInfo(_settings.ServiceAccountCredentials);
+                _logger.LogInformation("File exists, size: {Size} bytes", fileInfo.Length);
+
+                try
+                {
+                    using var stream = new FileStream(_settings.ServiceAccountCredentials, FileMode.Open, FileAccess.Read);
+                    credential = GoogleCredential.FromStream(stream);
+                    _logger.LogInformation("Successfully loaded credentials from file");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to load credentials from file. File content preview (first 100 chars):");
+                    try
+                    {
+                        var preview = File.ReadAllText(_settings.ServiceAccountCredentials).Substring(0, Math.Min(100, File.ReadAllText(_settings.ServiceAccountCredentials).Length));
+                        _logger.LogError("File content preview: {Preview}...", preview);
+                    }
+                    catch (Exception previewEx)
+                    {
+                        _logger.LogError(previewEx, "Could not read file for preview");
+                    }
+                    throw;
+                }
             }
             else
             {
                 // Load from JSON content
-                credential = GoogleCredential.FromJson(_settings.ServiceAccountCredentials);
+                _logger.LogInformation("Loading credentials from JSON content");
+                
+                if (string.IsNullOrEmpty(_settings.ServiceAccountCredentials))
+                {
+                    throw new InvalidOperationException("Service account credentials JSON content is empty");
+                }
+
+                _logger.LogInformation("JSON content length: {Length} characters", _settings.ServiceAccountCredentials.Length);
+                _logger.LogInformation("JSON content preview (first 100 chars): {Preview}...", 
+                    _settings.ServiceAccountCredentials.Substring(0, Math.Min(100, _settings.ServiceAccountCredentials.Length)));
+
+                try
+                {
+                    credential = GoogleCredential.FromJson(_settings.ServiceAccountCredentials);
+                    _logger.LogInformation("Successfully loaded credentials from JSON content");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to parse JSON credentials. Full JSON content: {Json}", _settings.ServiceAccountCredentials);
+                    throw;
+                }
             }
 
-            return credential.CreateScoped(new[] 
+            var scopedCredential = credential.CreateScoped(new[] 
             { 
                 DocsService.Scope.Documents, 
                 DriveService.Scope.DriveReadonly 
             });
+
+            _logger.LogInformation("Successfully created scoped Google credential");
+            return scopedCredential;
         }
         catch (Exception ex)
         {
@@ -361,6 +431,27 @@ public class GoogleDocsService : IGoogleDocsService
         html.AppendLine("</table>");
     }
 
+    private string GetHtmlTagForParagraphStyle(ParagraphStyle? style)
+    {
+        if (style?.NamedStyleType != null)
+        {
+            return style.NamedStyleType switch
+            {
+                "HEADING_1" => "h1",
+                "HEADING_2" => "h2",
+                "HEADING_3" => "h3",
+                "HEADING_4" => "h4",
+                "HEADING_5" => "h5",
+                "HEADING_6" => "h6",
+                "TITLE" => "h1",
+                "SUBTITLE" => "h2",
+                _ => "p"
+            };
+        }
+
+        return "p";
+    }
+
     private void ExtractPlainText(StructuralElement element, StringBuilder text)
     {
         if (element.Paragraph != null)
@@ -398,27 +489,6 @@ public class GoogleDocsService : IGoogleDocsService
                 text.AppendLine();
             }
         }
-    }
-
-    private string GetHtmlTagForParagraphStyle(ParagraphStyle? style)
-    {
-        if (style?.NamedStyleType != null)
-        {
-            return style.NamedStyleType switch
-            {
-                "HEADING_1" => "h1",
-                "HEADING_2" => "h2",
-                "HEADING_3" => "h3",
-                "HEADING_4" => "h4",
-                "HEADING_5" => "h5",
-                "HEADING_6" => "h6",
-                "TITLE" => "h1",
-                "SUBTITLE" => "h2",
-                _ => "p"
-            };
-        }
-
-        return "p";
     }
 
     private string GetDefaultStyles()
@@ -462,15 +532,12 @@ public class GoogleDocsService : IGoogleDocsService
 
     private async Task<string> ConvertHtmlToGoogleDocsAsync(string htmlContent)
     {
-        // For now, return as-is since Google Docs API handles HTML import
-        // In a full implementation, you might want to clean up the HTML
         await Task.CompletedTask;
         return htmlContent;
     }
 
     private async Task<string> ConvertMarkdownToGoogleDocsAsync(string markdownContent)
     {
-        // Basic Markdown to HTML conversion
         await Task.CompletedTask;
         
         return markdownContent
@@ -483,7 +550,6 @@ public class GoogleDocsService : IGoogleDocsService
 
     private async Task<string> ConvertPlainTextToGoogleDocsAsync(string plainTextContent)
     {
-        // Wrap plain text in paragraphs
         await Task.CompletedTask;
         
         var lines = plainTextContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
