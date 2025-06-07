@@ -32,7 +32,8 @@
     <PackageReference Include="AspNetCore.HealthChecks.Npgsql" Version="8.0.1" />
     <PackageReference Include="AspNetCore.HealthChecks.Uris" Version="8.0.1" />
     <PackageReference Include="Google.Apis.Docs.v1" Version="1.68.0.3490" />
-    <PackageReference Include="Google.Apis.Auth" Version="1.68.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.69.0.3783" />
+    <PackageReference Include="Google.Apis.Auth" Version="1.69.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.61" />
     <PackageReference Include="xunit" Version="2.9.3" />
   </ItemGroup>

@@ -126,6 +126,16 @@ public class GoogleDocsSettings
     /// Number of retry attempts for Google API calls
     /// </summary>
     public int RetryAttempts { get; set; } = 3;
+
+    /// <summary>
+    /// Google Drive folder ID containing resume templates
+    /// </summary>
+    public string TemplateFolderId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether to use file path or JSON content for credentials
+    /// </summary>
+    public bool UseCredentialsFile { get; set; } = true;
 }
 
 /// <summary>
