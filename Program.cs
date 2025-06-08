@@ -21,6 +21,7 @@ builder.Host.UseSerilog();
 
 // Add services using extension methods
 builder.Services.AddApplicationConfiguration(builder.Configuration);
+builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddHttpClient();
 builder.Services.AddDatabaseConfiguration(builder.Configuration);
 builder.Services.AddHttpClientConfiguration(builder.Configuration);

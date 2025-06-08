@@ -1,6 +1,9 @@
+// Update your Data/ResumeGeneratorContext.cs file with these additions
+
 using Microsoft.EntityFrameworkCore;
 using ResumeGenerator.API.Models.Entities;
 using ResumeGenerator.API.Models.Enums;
+using System.Security.Claims;
 
 namespace ResumeGenerator.API.Data;
 
@@ -13,16 +16,21 @@ public class ResumeGeneratorContext : DbContext
     {
     }
 
+    // Existing DbSets
     public DbSet<ResumeTemplate> ResumeTemplates { get; set; } = null!;
     public DbSet<ResumeJob> ResumeJobs { get; set; } = null!;
     public DbSet<ResumeJobLog> ResumeJobLogs { get; set; } = null!;
     public DbSet<ApiUsageStats> ApiUsageStats { get; set; } = null!;
 
+    // NEW: Authentication DbSets - ADD THESE
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configure ResumeTemplate
+        // Configure ResumeTemplate (existing - keep as is)
         modelBuilder.Entity<ResumeTemplate>(entity =>
         {
             entity.HasIndex(e => e.Name).HasDatabaseName("IX_resume_templates_name");
@@ -47,13 +55,16 @@ public class ResumeGeneratorContext : DbContext
                 .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Configure ResumeJob
+        // Configure ResumeJob (existing but needs UPDATE for User relationship)
         modelBuilder.Entity<ResumeJob>(entity =>
         {
             entity.HasIndex(e => e.Status).HasDatabaseName("IX_resume_jobs_status");
             entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_resume_jobs_created_at");
             entity.HasIndex(e => e.TemplateId).HasDatabaseName("IX_resume_jobs_template_id");
             entity.HasIndex(e => new { e.Status, e.CreatedAt }).HasDatabaseName("IX_resume_jobs_status_created_at");
+            
+            // NEW: Add index for UserId
+            entity.HasIndex(e => e.UserId).HasDatabaseName("IX_resume_jobs_user_id");
 
             entity.Property(e => e.Status)
                 .HasConversion<string>()
@@ -79,9 +90,15 @@ public class ResumeGeneratorContext : DbContext
 
             entity.ToTable(tb => tb.HasCheckConstraint("CK_resume_jobs_progress_percentage", 
                 "progress_percentage >= 0 AND progress_percentage <= 100"));
+
+            // NEW: Configure User relationship
+            entity.HasOne(e => e.User)
+                .WithMany(e => e.ResumeJobs)
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull); // Use SetNull since UserId is nullable
         });
 
-        // Configure ResumeJobLog
+        // Configure ResumeJobLog (existing - keep as is)
         modelBuilder.Entity<ResumeJobLog>(entity =>
         {
             entity.HasIndex(e => e.JobId).HasDatabaseName("IX_resume_job_logs_job_id");
@@ -102,7 +119,7 @@ public class ResumeGeneratorContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Configure ApiUsageStats
+        // Configure ApiUsageStats (existing - keep as is)
         modelBuilder.Entity<ApiUsageStats>(entity =>
         {
             entity.HasIndex(e => e.Date)
@@ -116,10 +133,66 @@ public class ResumeGeneratorContext : DbContext
                 .HasDefaultValueSql("CURRENT_TIMESTAMP");
         });
 
-        // Add some default templates
+        // NEW: Configure User entity
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.HasIndex(e => e.Email)
+                .IsUnique()
+                .HasDatabaseName("IX_users_email");
+            
+            entity.HasIndex(e => e.IsActive).HasDatabaseName("IX_users_is_active");
+            entity.HasIndex(e => e.CreatedAt).HasDatabaseName("IX_users_created_at");
+
+            entity.Property(e => e.Email)
+                .HasMaxLength(255)
+                .IsRequired();
+
+            entity.Property(e => e.FirstName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.LastName)
+                .HasMaxLength(100)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.Property(e => e.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // Relationships - ResumeJobs relationship is configured above in ResumeJob entity
+        });
+
+        // NEW: Configure RefreshToken entity
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasIndex(e => e.Token)
+                .IsUnique()
+                .HasDatabaseName("IX_refresh_tokens_token");
+            
+            entity.HasIndex(e => e.UserId).HasDatabaseName("IX_refresh_tokens_user_id");
+            entity.HasIndex(e => e.ExpiresAt).HasDatabaseName("IX_refresh_tokens_expires_at");
+            entity.HasIndex(e => e.IsRevoked).HasDatabaseName("IX_refresh_tokens_is_revoked");
+
+            entity.Property(e => e.Token)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Add some default templates (existing - keep as is)
         SeedDefaultTemplates(modelBuilder);
     }
 
+    // Keep existing SeedDefaultTemplates method and SaveChangesAsync override as they are
     private static void SeedDefaultTemplates(ModelBuilder modelBuilder)
     {
         var modernTemplate = new ResumeTemplate
@@ -224,7 +297,7 @@ public class ResumeGeneratorContext : DbContext
 
         var creativeTemplate = new ResumeTemplate
         {
-            Id = Guid.Parse("b2c3d4e5-f6a7-8901-2345-678901bcdef0"),  // Valid - only hex chars (0-9, a-f)
+            Id = Guid.Parse("b2c3d4e5-f6a7-8901-2345-678901bcdef0"),
             Name = "Creative Portfolio",
             Description = "A creative template for designers and creative professionals",
             Content = @"
@@ -328,6 +401,10 @@ public class ResumeGeneratorContext : DbContext
             else if (entry.Entity is ApiUsageStats stats && entry.State == EntityState.Modified)
             {
                 stats.UpdatedAt = DateTime.UtcNow;
+            }
+            else if (entry.Entity is User user && entry.State == EntityState.Modified)
+            {
+                user.UpdatedAt = DateTime.UtcNow;
             }
         }
 

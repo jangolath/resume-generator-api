@@ -6,6 +6,11 @@ using ResumeGenerator.API.Services.Implementation;
 using ResumeGenerator.API.Services.Interfaces;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 namespace ResumeGenerator.API.Extensions;
 
@@ -44,6 +49,30 @@ public static class ServiceCollectionExtensions
 
         return services;
     }
+
+    public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
+        {
+        _ = services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = configuration["Jwt:Issuer"],
+                ValidAudience = configuration["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Secret"] ?? string.Empty))
+            };
+        });
+
+            return services;
+        }
 
     /// <summary>
     /// Add application configuration
@@ -391,6 +420,10 @@ public static class WebApplicationExtensions
         // Standard middleware
         app.UseHttpsRedirection();
         app.UseRouting();
+
+        // Authentication & Authorization
+        app.UseAuthentication();
+        app.UseAuthorization();
 
         // CORS
         var corsPolicy = app.Environment.IsProduction() ? "ProductionPolicy" : "DefaultPolicy";
