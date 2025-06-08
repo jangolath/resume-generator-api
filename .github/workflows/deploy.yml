@@ -1,0 +1,88 @@
+# name: Build and Deploy to Digital Ocean Kubernetes
+
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+
+# env:
+#   REGISTRY: registry.digitalocean.com
+#   IMAGE_NAME: your-registry/resume-generator-api
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+    
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v4
+
+#     - name: Install doctl
+#       uses: digitalocean/action-doctl@v2
+#       with:
+#         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+#     - name: Log in to DO Container Registry
+#       run: doctl registry login --expiry-seconds 600
+
+#     - name: Build Docker image
+#       run: |
+#         docker build -t $REGISTRY/$IMAGE_NAME:$GITHUB_SHA .
+#         docker build -t $REGISTRY/$IMAGE_NAME:latest .
+
+#     - name: Push Docker image
+#       run: |
+#         docker push $REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+#         docker push $REGISTRY/$IMAGE_NAME:latest
+
+#   deploy-production:
+#     needs: build
+#     runs-on: ubuntu-latest
+#     environment: production  # This targets the production environment
+#     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v4
+      
+#     - name: Install doctl
+#       uses: digitalocean/action-doctl@v2
+#       with:
+#         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+#     - name: Update Kubernetes deployment
+#       run: |
+#         # Save kubeconfig
+#         doctl kubernetes cluster kubeconfig save --expiry-seconds 600 ${{ secrets.CLUSTER_NAME }}
+        
+#         # Create or update secrets
+#         kubectl create secret generic google-credentials \
+#           --from-literal=service-account.json='${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}' \
+#           --from-literal=template-folder-id='${{ secrets.GOOGLE_TEMPLATE_FOLDER_ID }}' \
+#           --dry-run=client -o yaml | kubectl apply -f -
+        
+#         # Create OpenAI credentials if provided
+#         if [ ! -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+#           kubectl create secret generic openai-credentials \
+#             --from-literal=api-key='${{ secrets.OPENAI_API_KEY }}' \
+#             --from-literal=organization-id='${{ secrets.OPENAI_ORGANIZATION_ID }}' \
+#             --dry-run=client -o yaml | kubectl apply -f -
+#         fi
+        
+#         # Create Claude credentials if provided
+#         if [ ! -z "${{ secrets.CLAUDE_API_KEY }}" ]; then
+#           kubectl create secret generic claude-credentials \
+#             --from-literal=api-key='${{ secrets.CLAUDE_API_KEY }}' \
+#             --dry-run=client -o yaml | kubectl apply -f -
+#         fi
+        
+#         # Apply the deployment YAML
+#         kubectl apply -f k8s/deployment.yaml
+        
+#         # Update the deployment with new image
+#         kubectl set image deployment/resume-generator-api \
+#           resume-generator-api=$REGISTRY/$IMAGE_NAME:$GITHUB_SHA
+        
+#         # Wait for rollout to complete
+#         kubectl rollout status deployment/resume-generator-api --timeout=300s

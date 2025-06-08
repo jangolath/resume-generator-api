@@ -99,11 +99,24 @@ public interface IOpenAIService
 public interface IGoogleDocsService
 {
     /// <summary>
+    /// Get all resume templates from the configured Google Drive folder
+    /// </summary>
+    /// <returns>List of available templates</returns>
+    Task<IEnumerable<GoogleDocsTemplateDto>> GetTemplatesFromFolderAsync();
+
+    /// <summary>
+    /// Get detailed information about a specific Google Docs template
+    /// </summary>
+    /// <param name="documentId">Google Document ID</param>
+    /// <returns>Detailed template information including content</returns>
+    Task<GoogleDocsTemplateDetailDto> GetTemplateDetailAsync(string documentId);
+
+    /// <summary>
     /// Import template content from Google Docs
     /// </summary>
-    /// <param name="documentUrl">Google Docs URL</param>
-    /// <param name="credentials">Service account credentials</param>
-    /// <returns>Imported content</returns>
+    /// <param name="documentUrl">Google Docs URL or document ID</param>
+    /// <param name="credentials">Service account credentials (optional, uses config if not provided)</param>
+    /// <returns>Imported content as HTML</returns>
     Task<string> ImportTemplateFromGoogleDocsAsync(string documentUrl, string? credentials = null);
 
     /// <summary>
@@ -115,9 +128,9 @@ public interface IGoogleDocsService
     Task<string> ConvertToGoogleDocsFormatAsync(string content, OutputFormat format);
 
     /// <summary>
-    /// Validate Google Docs URL
+    /// Validate Google Docs URL or document ID
     /// </summary>
-    /// <param name="url">URL to validate</param>
+    /// <param name="url">URL or document ID to validate</param>
     /// <returns>True if valid, false otherwise</returns>
     bool IsValidGoogleDocsUrl(string url);
 }
