@@ -46,7 +46,8 @@ public class OpenAIService : IOpenAIService
             // Don't log the full auth header for security
             if (header.Key == "Authorization")
             {
-                _logger.LogInformation("- {Key}: Bearer {Value}", header.Key, 
+                // Don't add "Bearer" prefix since the header value already contains it
+                _logger.LogInformation("- {Key}: {Value}", header.Key, 
                     header.Value.FirstOrDefault()?.Substring(0, Math.Min(20, header.Value.FirstOrDefault()?.Length ?? 0)) + "...");
             }
             else
@@ -63,10 +64,12 @@ public class OpenAIService : IOpenAIService
         // Clear existing headers first
         _httpClient.DefaultRequestHeaders.Clear();
         
-        // Add authorization header
+        // Add authorization header using the proper method
         if (!string.IsNullOrEmpty(_settings.ApiKey))
         {
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_settings.ApiKey}");
+            // Use AuthenticationHeaderValue instead of Add() - this is the correct way
+            _httpClient.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _settings.ApiKey);
             _logger.LogDebug("Added Authorization header with API key");
         }
         else
