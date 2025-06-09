@@ -62,7 +62,7 @@ public class ResumeTemplate
 }
 
 /// <summary>
-/// Resume generation job entity
+/// Resume generation job entity (UPDATED with User relationship)
 /// </summary>
 [Table("resume_jobs")]
 public class ResumeJob
@@ -74,6 +74,10 @@ public class ResumeJob
     [Required]
     [Column("template_id")]
     public Guid TemplateId { get; set; }
+
+    // NEW: Add this property for user relationship
+    [Column("user_id")]
+    public Guid? UserId { get; set; }
 
     [Column("status")]
     public JobStatus Status { get; set; } = JobStatus.Pending;
@@ -173,7 +177,11 @@ public class ResumeJob
     [ForeignKey("TemplateId")]
     public virtual ResumeTemplate Template { get; set; } = null!;
 
-    // Helper properties for complex JSON data
+    // NEW: Add this navigation property for User relationship
+    [ForeignKey("UserId")]
+    public virtual User? User { get; set; }
+
+    // Helper properties for complex JSON data (existing - keep as is)
     [NotMapped]
     public ResumeGenerationRequestDto? InputData
     {

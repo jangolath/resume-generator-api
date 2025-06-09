@@ -1,5 +1,7 @@
 using ResumeGenerator.API.Models.DTOs;
 using ResumeGenerator.API.Models.Enums;
+using ResumeGenerator.API.Models.Entities;
+using System.Security.Claims;
 
 namespace ResumeGenerator.API.Services.Interfaces;
 
@@ -323,4 +325,24 @@ public class JobLogDto
     public long? DurationMs { get; set; }
     public bool IsError { get; set; }
     public object? Details { get; set; }
+}
+
+public interface IJwtService
+{
+    string GenerateAccessToken(User user);
+    string GenerateRefreshToken();
+    ClaimsPrincipal? ValidateToken(string token);
+    Task<string> GenerateRefreshTokenAsync(Guid userId);
+    Task<bool> ValidateRefreshTokenAsync(string token, Guid userId);
+    Task RevokeRefreshTokenAsync(string token);
+}
+
+public interface IUserService
+{
+    Task<User> CreateUserAsync(RegisterRequestDto request);
+    Task<User?> ValidateUserAsync(string email, string password);
+    Task<User?> GetUserByIdAsync(Guid userId);
+    Task<User?> GetUserByEmailAsync(string email);
+    Task UpdateLastLoginAsync(Guid userId);
+    Task<bool> EmailExistsAsync(string email);
 }
